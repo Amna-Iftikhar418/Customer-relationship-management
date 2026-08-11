@@ -62,7 +62,11 @@ export default function Inbox() {
           />
         </div>
         <div className="flex-1">
-          <ChatPanel conversationId={selectedId} conversation={selectedConv} />
+          <ChatPanel
+            conversationId={selectedId}
+            conversation={selectedConv}
+            onStatusChanged={fetchConversations}
+          />
         </div>
       </div>
     </Layout>

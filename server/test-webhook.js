@@ -7,7 +7,7 @@ const body = JSON.stringify({
     changes: [{
       field: "messages",
       value: {
-        metadata: { phone_number_id: "1324293490758020" },
+        metadata: { phone_number_id: "1304373422750526" },
         messages: [{
           from: "923289941739",
           id: "wamid_live_test_" + Date.now(),

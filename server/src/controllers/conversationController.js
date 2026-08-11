@@ -3,9 +3,9 @@ const prisma = require('../db');
 const VALID_STATUSES = ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 
 const ALLOWED_TRANSITIONS = {
-  NEW: ['ASSIGNED', 'CLOSED'],
-  ASSIGNED: ['IN_PROGRESS', 'CLOSED'],
-  IN_PROGRESS: ['RESOLVED', 'CLOSED'],
+  NEW: ['ASSIGNED'],
+  ASSIGNED: ['IN_PROGRESS'],
+  IN_PROGRESS: ['RESOLVED'],
   RESOLVED: ['CLOSED'],
   CLOSED: [],
 };
@@ -152,6 +152,32 @@ async function updateStatus(req, res) {
   }
 }
 
+async function deleteConversation(req, res) {
+  try {
+    const { id } = req.params;
+    const { id: userId, role } = req.user;
+
+    const conversation = await prisma.conversation.findUnique({ where: { id } });
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    if (role === 'AGENT' && conversation.assigned_to !== userId) {
+      return res.status(403).json({ error: 'Access denied. Conversation not assigned to you.' });
+    }
+
+    await prisma.$transaction([
+      prisma.message.deleteMany({ where: { conversation_id: id } }),
+      prisma.conversation.delete({ where: { id } }),
+    ]);
+
+    res.json({ message: 'Conversation deleted successfully.' });
+  } catch (error) {
+    console.error('Delete conversation error:', error);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+}
+
 async function assignConversation(req, res) {
   try {
     const { id } = req.params;
@@ -233,6 +259,7 @@ module.exports = {
   getConversation,
   createConversation,
   updateStatus,
+  deleteConversation,
   assignConversation,
   reassignConversation,
 };

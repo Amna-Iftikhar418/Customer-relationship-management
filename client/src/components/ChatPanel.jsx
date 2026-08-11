@@ -4,8 +4,9 @@ import useAuth from '@/hooks/useAuth';
 import MessageBubble from './MessageBubble';
 import StatusBadge from './StatusBadge';
 
-export default function ChatPanel({ conversationId, conversation }) {
+export default function ChatPanel({ conversationId, conversation, onStatusChanged }) {
   const [messages, setMessages] = useState([]);
+  const [status, setStatus] = useState(conversation?.status);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
@@ -22,6 +23,7 @@ export default function ChatPanel({ conversationId, conversation }) {
     try {
       const res = await api.get(`/conversations/${conversationId}`);
       setMessages(res.data.messages || []);
+      setStatus(res.data.status);
     } catch (err) {
       console.error('Failed to fetch messages:', err);
     }
@@ -51,8 +53,10 @@ export default function ChatPanel({ conversationId, conversation }) {
 
   const handleStatusChange = async (newStatus) => {
     try {
-      await api.patch(`/conversations/${conversationId}`, { status: newStatus });
+      await api.patch(`/conversations/${conversationId}/status`, { status: newStatus });
+      setStatus(newStatus);
       fetchMessages();
+      onStatusChanged?.();
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to update status');
     }
@@ -67,7 +71,7 @@ export default function ChatPanel({ conversationId, conversation }) {
   }
 
   const statusFlow = ['NEW', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
-  const currentIdx = statusFlow.indexOf(conversation?.status);
+  const currentIdx = statusFlow.indexOf(status);
   const nextStatus = statusFlow[currentIdx + 1];
 
   return (
@@ -80,7 +84,7 @@ export default function ChatPanel({ conversationId, conversation }) {
           <p className="text-xs text-gray-500">{conversation?.customer?.whatsapp_number}</p>
         </div>
         <div className="flex items-center gap-2">
-          <StatusBadge status={conversation?.status} />
+          <StatusBadge status={status} />
           {nextStatus && user?.role === 'AGENT' && (
             <button
               onClick={() => handleStatusChange(nextStatus)}

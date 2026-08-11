@@ -4,6 +4,7 @@ const {
   getConversation,
   createConversation,
   updateStatus,
+  deleteConversation,
   assignConversation,
   reassignConversation,
 } = require('../controllers/conversationController');
@@ -18,6 +19,7 @@ router.get('/', listConversations);
 router.get('/:id', getConversation);
 router.post('/', createConversation);
 router.patch('/:id/status', updateStatus);
+router.delete('/:id', deleteConversation);
 router.post('/:id/assign', rbacMiddleware('ADMIN'), assignConversation);
 router.put('/:id/assign', rbacMiddleware('ADMIN'), reassignConversation);
 

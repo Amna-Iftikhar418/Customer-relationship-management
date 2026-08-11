@@ -18,11 +18,7 @@ async function listCustomers(req, res) {
       where,
       orderBy: { created_at: 'desc' },
       include: {
-        conversations: {
-          select: { id: true, status: true, updated_at: true },
-          orderBy: { updated_at: 'desc' },
-          take: 1,
-        },
+        _count: { select: { conversations: true } },
       },
     });
 

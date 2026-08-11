@@ -25,24 +25,47 @@ function verifyWebhook(req, res) {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
+  const expected = process.env.VERIFY_TOKEN;
 
-  if (mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
+  console.log('[webhook-verify] mode=', mode);
+  console.log('[webhook-verify] token=', token);
+  console.log('[webhook-verify] expected=', expected);
+  console.log('[webhook-verify] token matches =', token === expected);
+
+  if (mode === 'subscribe' && token === expected) {
     console.log('Webhook verified.');
     return res.status(200).send(challenge);
   }
 
+  const reason =
+    mode !== 'subscribe'
+      ? `mode is "${mode}" (expected "subscribe")`
+      : 'verify_token does not match';
+  console.error(`[webhook-verify] FAILED: ${reason}`);
   return res.sendStatus(403);
 }
 
 async function receiveWebhook(req, res) {
   try {
     if (!verifyWebhookSignature(req)) {
+      const signature = req.headers['x-hub-signature-256'];
+      const expected = req.rawBody
+        ? `sha256=${crypto
+            .createHmac('sha256', process.env.META_APP_SECRET)
+            .update(req.rawBody)
+            .digest('hex')}`
+        : '(no raw body captured)';
+      console.error('[webhook-receive] SIGNATURE FAILED');
+      console.error('[webhook-receive] received:', signature || '(none)');
+      console.error('[webhook-receive] expected:', expected);
+      console.error('[webhook-receive] meta_app_secret set:', Boolean(process.env.META_APP_SECRET));
       return res.sendStatus(403);
     }
 
     const body = req.body;
 
     if (body.object !== 'whatsapp_business_account') {
+      console.error(`[webhook-receive] UNKNOWN OBJECT: "${body.object}"`);
       return res.sendStatus(404);
     }
 
@@ -64,7 +87,8 @@ async function receiveWebhook(req, res) {
 
     return res.sendStatus(200);
   } catch (error) {
-    console.error('Webhook processing error:', error);
+    console.error('[webhook-receive] processing error:', error.stack || error);
+    console.error('[webhook-receive] body:', JSON.stringify(req.body));
     return res.sendStatus(500);
   }
 }
@@ -245,7 +269,9 @@ async function sendMessage(req, res) {
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.error('Send message error:', error.response?.data || error.message);
+    console.error('[send-message] error:', error.response?.data || error.message);
+    console.error('[send-message] status:', error.response?.status);
+    console.error('[send-message] stack:', error.stack);
     res.status(500).json({ error: 'Failed to send message via WhatsApp API.' });
   }
 }
@@ -298,7 +324,9 @@ async function sendTemplate(req, res) {
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.error('Send template error:', error.response?.data || error.message);
+    console.error('[send-template] error:', error.response?.data || error.message);
+    console.error('[send-template] status:', error.response?.status);
+    console.error('[send-template] stack:', error.stack);
     res.status(500).json({ error: 'Failed to send template via WhatsApp API.' });
   }
 }

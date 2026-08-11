@@ -18,6 +18,17 @@ app.use(express.json({
   },
 }));
 
+app.use((req, res, next) => {
+  if (req.path.includes('/webhook')) {
+    console.log(`[webhook-request] ${req.method} ${req.originalUrl}`);
+    console.log(`[webhook-headers] x-hub-signature-256=${req.headers['x-hub-signature-256'] || '(none)'}`);
+    if (req.method === 'POST') {
+      console.log(`[webhook-body] ${JSON.stringify(req.body)}`);
+    }
+  }
+  next();
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/customers', customerRoutes);
@@ -27,6 +38,15 @@ app.use('/api', webhookRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.use((err, req, res, next) => {
+  console.error('[unhandled-error]', new Date().toISOString());
+  console.error('[unhandled-error] path:', req.originalUrl);
+  console.error('[unhandled-error] stack:', err.stack || err.message || err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
