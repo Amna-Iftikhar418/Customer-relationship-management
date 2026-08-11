@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  role          Role     @default(AGENT)
+  created_at    DateTime @default(now())
+
+  conversations Conversation[]
+}
+
+model Customer {
+  id               String   @id @default(uuid())
+  name             String
+  whatsapp_number  String   @unique
+  email            String?
+  created_at       DateTime @default(now())
+
+  conversations Conversation[]
+}
+
+model Conversation {
+  id          String              @id @default(uuid())
+  customer_id String
+  assigned_to String?
+  status      ConversationStatus @default(NEW)
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+
+  customer Customer @relation(fields: [customer_id], references: [id])
+  agent    User?    @relation(fields: [assigned_to], references: [id])
+  messages Message[]
+
+  @@index([customer_id])
+  @@index([assigned_to])
+  @@index([status])
+}
+
+model Message {
+  id              String        @id @default(uuid())
+  conversation_id String
+  sender          String
+  message         String
+  timestamp       DateTime      @default(now())
+  direction       Direction
+  status          MessageStatus @default(SENT)
+  meta_message_id String?
+
+  conversation Conversation @relation(fields: [conversation_id], references: [id])
+
+  @@index([conversation_id])
+  @@index([timestamp])
+  @@index([meta_message_id])
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+enum ConversationStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
